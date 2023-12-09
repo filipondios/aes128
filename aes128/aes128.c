@@ -1,8 +1,9 @@
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "aes128.h"
 
-#define DEBUG 1
 #define Round01 0
 #define Round02 1
 #define Round03 2
@@ -65,6 +66,19 @@ static const uint8_t Rcon[][4] = {
   [Round10] = {0x36, 0x00, 0x00, 0x00}
 };
 
+static uint8_t RoundKeys[10][16] = {
+  [Round01] = {0x00},
+  [Round02] = {0x00},
+  [Round03] = {0x00},
+  [Round04] = {0x00},
+  [Round05] = {0x00},
+  [Round06] = {0x00},
+  [Round07] = {0x00},
+  [Round08] = {0x00},
+  [Round09] = {0x00},
+  [Round10] = {0x00},
+};
+
 void aes128_subBytes(uint8_t block[16]) {
   block[0] = sbox[block[0]];
   block[1] = sbox[block[1]];
@@ -106,14 +120,16 @@ void aes128_invSubBytes(uint8_t block[16]) {
 void aes128_shiftRows(uint8_t block[16]) {
   uint8_t tmp;
 
-  /* Shift 1 row */
+  /* Shift row 1 to the left.
+   * (Offset = 1 columns) */
   tmp = block[1];
   block[1] = block[5];
   block[5] = block[9];
   block[9] = block[13];
   block[13] = tmp;
 
-  /* Shift 2 rows */
+  /* Shift row 2 to the left.
+   * (Offset = 2 columns) */
   tmp = block[2];
   block[2] = block[10];
   block[10] = tmp;
@@ -121,12 +137,42 @@ void aes128_shiftRows(uint8_t block[16]) {
   block[6] = block[14];
   block[14] = tmp;
 
-  /* Shift 3 rows */
+  /* Shift row 3 to the right.
+   * (Offset = 3 columns) */
   tmp = block[15];
   block[15] = block[11];
   block[11] = block[7];
   block[7] = block[3];
   block[3] = tmp;
+}
+
+void aes128_invShiftRows(uint8_t block[16]) {
+  uint8_t tmp;
+  
+  /* Shift row 1 to the right.
+   * (Offset = 1 columns) */
+  tmp = block[13];
+  block[13] = block[9];
+  block[9] = block[5];
+  block[5] = block[1];
+  block[1] = tmp;
+
+  /* Shift row 2 to the right.
+   * (Offset = 2 columns) */
+  tmp = block[10];
+  block[10] = block[2];
+  block[2] = tmp;
+  tmp = block[14];
+  block[14] = block[6];
+  block[6] = tmp;
+
+  /* Shift row 3 to the right.
+   * (Offset = 3 columns) */
+  tmp = block[3];
+  block[3] = block[7];
+  block[7] = block[11];
+  block[11] = block[15];
+  block[15] = tmp;
 }
 
 void aes128_mixColumns(uint8_t block[16]) {
@@ -135,20 +181,18 @@ void aes128_mixColumns(uint8_t block[16]) {
   uint8_t b0, b1, b2, b3;
 
   #define MIXCOL(i0, i1, i2, i3)\
-    do { \
-        a0 = block[i0]; \
-        a1 = block[i1]; \
-        a2 = block[i2]; \
-        a3 = block[i3]; \
-        b0 = (a0 << 1) ^ (a0 & 0x80 ? 0x1B : 0x00); \
-        b1 = (a1 << 1) ^ (a1 & 0x80 ? 0x1B : 0x00); \
-        b2 = (a2 << 1) ^ (a2 & 0x80 ? 0x1B : 0x00); \
-        b3 = (a3 << 1) ^ (a3 & 0x80 ? 0x1B : 0x00); \
-        block[i0] = b0 ^ a3 ^ a2 ^ (a1 ^ b1); \
-        block[i1] = b1 ^ a0 ^ a3 ^ (a2 ^ b2); \
-        block[i2] = b2 ^ a1 ^ a0 ^ (a3 ^ b3); \
-        block[i3] = b3 ^ a2 ^ a1 ^ (a0 ^ b0); \
-    } while (0)
+    a0 = block[i0]; \
+    a1 = block[i1]; \
+    a2 = block[i2]; \
+    a3 = block[i3]; \
+    b0 = (a0 << 1) ^ (a0 & 0x80 ? 0x1B : 0x00); \
+    b1 = (a1 << 1) ^ (a1 & 0x80 ? 0x1B : 0x00); \
+    b2 = (a2 << 1) ^ (a2 & 0x80 ? 0x1B : 0x00); \
+    b3 = (a3 << 1) ^ (a3 & 0x80 ? 0x1B : 0x00); \
+    block[i0] = b0 ^ a3 ^ a2 ^ (a1 ^ b1); \
+    block[i1] = b1 ^ a0 ^ a3 ^ (a2 ^ b2); \
+    block[i2] = b2 ^ a1 ^ a0 ^ (a3 ^ b3); \
+    block[i3] = b3 ^ a2 ^ a1 ^ (a0 ^ b0); \
 
   /* Calcular Palabra 1: 
    * Filas de MixCol*Colcumna1 de block */
@@ -167,7 +211,50 @@ void aes128_mixColumns(uint8_t block[16]) {
   MIXCOL(12, 13, 14, 15);
 }
 
-void aes128_addRoundKey(uint8_t block[16], uint8_t key[16]){
+uint8_t mult_GF256(uint8_t a, uint8_t b) {
+  uint8_t res = 0; 
+
+  for (uint8_t i = 0 ; i<8; i++) {
+    if (b&i) res ^= a;
+    a <<= 0x01;
+    if(a&0x80) a ^= 0x1b;
+    b >>= 0x01;
+  }
+  return res;
+}
+
+void aes128_invMixColumns(uint8_t block[16]) {
+  /* Variables temporales */
+  int a0, a1, a2, a3;
+
+  #define invMIXCOL(i0, i1, i2, i3)\
+    a0 = block[i0];\
+    a1 = block[i1];\
+    a2 = block[i2];\
+    a3 = block[i3];\
+    block[i0] = mult_GF256(0x0e,a0) ^ mult_GF256(0x0b,a1) ^ mult_GF256(0x0d,a2) ^ mult_GF256(0x09,a3);\
+    block[i1] = mult_GF256(0x09,a0) ^ mult_GF256(0x0e,a1) ^ mult_GF256(0x0b,a2) ^ mult_GF256(0x0d,a3);\
+    block[i2] = mult_GF256(0x0d,a0) ^ mult_GF256(0x09,a1) ^ mult_GF256(0x0e,a2) ^ mult_GF256(0x0b,a3);\
+    block[i3] = mult_GF256(0x0b,a0) ^ mult_GF256(0x0d,a1) ^ mult_GF256(0x09,a2) ^ mult_GF256(0x0e,a3);\
+  
+  /* Calcular Palabra 1: 
+   * Filas de MixCol*Colcumna1 de block */
+  invMIXCOL(0, 1, 2, 3);
+
+  /* Calcular Palabra 2: 
+   * Filas de MixCol*Colcumna2 de block */
+  invMIXCOL(4, 5, 6, 7);
+
+  /* Calcular Palabra 3: 
+   * Filas de MixCol*Columna3 de block */
+  invMIXCOL(8, 9, 10, 11);
+
+  /* Calcular Palabra 4: 
+   * Filas de MixCol*Columna4 de block */
+  invMIXCOL(12, 13, 14, 15);
+}
+
+void aes128_addRoundKey(uint8_t block[16], const uint8_t key[16]){
   block[0] ^= key[0];
   block[1] ^= key[1];
   block[2] ^= key[2];
@@ -242,7 +329,14 @@ void aes128_expandKey(uint8_t key[16], uint8_t round) {
   key[15] = key[11] ^ key[15];
 }
 
-void aes128_encrypt(uint8_t block[16], uint8_t cipher_block[16], const uint8_t key[16]) {
+void printBlock(uint8_t* block) {
+  for (uint8_t j=0; j < 16; j++)
+    printf("%02x ", block[j]);
+  printf("\n");
+}
+
+void aes128_encrypt(const uint8_t block[16], uint8_t cipher_block[16], const uint8_t key[16]) {
+  uint8_t round;
   uint8_t roundKey[16];
 
   memcpy(roundKey, key, 16);
@@ -253,13 +347,13 @@ void aes128_encrypt(uint8_t block[16], uint8_t cipher_block[16], const uint8_t k
   aes128_addRoundKey(cipher_block, roundKey);
   
   /* Hacer las 10 rondas de AES */
-  for (uint8_t round=Round01; round<=Round10; round++){
+  for (round = Round01; ; round++){
     aes128_subBytes(cipher_block);
     aes128_shiftRows(cipher_block);
 
-    if(round != Round10)
+    if (round != Round10)
       aes128_mixColumns(cipher_block);
-
+    
     aes128_expandKey(roundKey, round);
     aes128_addRoundKey(cipher_block, roundKey);
   }
@@ -267,29 +361,56 @@ void aes128_encrypt(uint8_t block[16], uint8_t cipher_block[16], const uint8_t k
 
 void aes128_decrypt(const uint8_t cipher_block[16], uint8_t block[16], const uint8_t key[16]) {
   uint8_t roundKey[16];
-  uint8_t roundKeys[10][16];
+  int8_t round;
   
   memcpy(block, cipher_block, 16);
   memcpy(roundKey, key, 16);
-  
-  /* Generar todas las roundkeys */ 
-  for (uint8_t i = Round01; i <= Round10; i++) {
+
+  for (uint8_t i = Round01; i <= Round10; i++){
+    // Generate all round keys
     aes128_expandKey(roundKey, i);
-    memcpy(roundKeys[i], roundKey, 16);
+    memcpy(RoundKeys[i], roundKey, 16);
   }
 
-  /* Hacer las 10 rondas de AES en orden inverso */
-  for (uint8_t round=Round10; round>=Round01; round--){
-    aes128_addRoundKey(block, roundKeys[round]);
+  // todo
 
-    if(round != Round10)
-      aes128_mixColumns(block);
-
-    aes128_invSubBytes(block);
-    aes128_shiftRows(block);
-  }
-
-  /* El ultimo paso es hacer XOR entre 
-   * block y key */
-  aes128_addRoundKey(block, roundKey);
 }
+
+int main(void) {
+  
+  /* Key to use */
+  const uint8_t key[16] = { 
+    0x54, 0x68, 0x61, 0x74,
+    0x73, 0x20, 0x6D, 0x79,
+    0x20, 0x4B, 0x75, 0x6E,
+    0x67, 0x20, 0x46, 0x75, 
+  };
+
+  /* Block to encrypt */ 
+  const uint8_t block[16] = {
+    0x54, 0x77, 0x6F, 0x20,
+    0x4F, 0x6E, 0x65, 0x20,
+    0x4E, 0x69, 0x6E, 0x65,
+    0x20, 0x54, 0x77, 0x6F,
+  };
+
+  /* Buffer to store the cipher block */
+  uint8_t cipher_block[16];
+  uint8_t recovered_block[16];
+  
+  aes128_encrypt(block, cipher_block, key);
+
+  printf("Bloque encriptado: \n");
+  printBlock(cipher_block);
+  printf("\n");
+  
+  aes128_decrypt(cipher_block, recovered_block, key);
+  printf("Bloque desencriptado:\n");
+  printBlock(recovered_block);
+  printf("\n");
+
+  return 0;
+}
+
+
+
