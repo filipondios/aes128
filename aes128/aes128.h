@@ -1,3 +1,5 @@
+#ifndef _AES128_H
+#define _AES128_H
 #include <stdint.h>
 
 void initialize_aes_sbox(uint8_t sbox[256]);
@@ -8,4 +10,6 @@ void mixColumns(uint8_t block[16]);
 void aes128_addRoundKey(uint8_t block[16], uint8_t key[16]);
 void aes128_expandKey(uint8_t block[16], uint8_t round);
 void aes128_g(uint8_t word[4], uint8_t round);
-void aes128_encrypt(uint8_t block[16], const uint8_t key[16]);
+void aes128_encrypt(uint8_t block[16], uint8_t cipher_block[16], const uint8_t key[16]);
+
+#endif // !_AES128_H
