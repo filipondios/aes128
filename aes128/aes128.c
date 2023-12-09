@@ -332,7 +332,7 @@ void aes128_expandKey(uint8_t key[16], uint8_t round) {
 void printBlock(uint8_t* block) {
   for (uint8_t j=0; j < 16; j++)
     printf("%02x ", block[j]);
-  printf("\n");
+  printf("\n\n");
 }
 
 void aes128_encrypt(const uint8_t block[16], uint8_t cipher_block[16], const uint8_t key[16]) {
@@ -347,7 +347,7 @@ void aes128_encrypt(const uint8_t block[16], uint8_t cipher_block[16], const uin
   aes128_addRoundKey(cipher_block, roundKey);
   
   /* Hacer las 10 rondas de AES */
-  for (round = Round01; ; round++){
+  for (round = Round01; round <= Round10; round++){
     aes128_subBytes(cipher_block);
     aes128_shiftRows(cipher_block);
 
@@ -361,19 +361,64 @@ void aes128_encrypt(const uint8_t block[16], uint8_t cipher_block[16], const uin
 
 void aes128_decrypt(const uint8_t cipher_block[16], uint8_t block[16], const uint8_t key[16]) {
   uint8_t roundKey[16];
-  int8_t round;
+  uint8_t round;
   
   memcpy(block, cipher_block, 16);
   memcpy(roundKey, key, 16);
 
-  for (uint8_t i = Round01; i <= Round10; i++){
+  for (round = Round01; round <= Round10; round++){
     // Generate all round keys
-    aes128_expandKey(roundKey, i);
-    memcpy(RoundKeys[i], roundKey, 16);
+    aes128_expandKey(roundKey, round);
+    if(round != Round10) memcpy(RoundKeys[round], roundKey, 16);
   }
 
-  // todo
+  /* El primer paso es hacer XOR entre 
+   * block y key de la ultima ronda. */
+  printf("Primera roundkey:\n");
+  aes128_addRoundKey(block, roundKey);
+  printBlock(roundKey);
 
+  printf("Bloque tras roundkey\n");
+  printBlock(block);
+  getchar();
+
+  // Hacer AES en sentido contrario
+  for (round = Round01; ; round++){
+    printf("-----------------------\n");
+
+    aes128_invShiftRows(block);
+    printf("Bloque tras aes128_shiftRows:\n");
+    printBlock(block);
+    getchar();
+
+    aes128_invSubBytes(block);
+    printf("Bloque tras aes128_invSubBytes\n");
+    printBlock(block);
+    getchar();
+
+    if(round == Round10) break;
+
+    aes128_addRoundKey(block, RoundKeys[Round09-round]);
+    printf("RoundKey :\n");
+    printBlock(RoundKeys[Round09-round]);
+    
+    printf("Bloque tras aes128_addRoundKey:\n");
+    printBlock(block);
+    getchar();
+    
+    printf("Bloque tras aes128_invMixColumns:\n");
+    aes128_invMixColumns(block);
+    printBlock(block);
+    getchar();
+  }
+  
+  /* Anadir la clave original */
+  printf("Clave principal:\n");
+  aes128_addRoundKey(block, key);
+  printBlock(key);
+
+  printf("Bloque al final:\n");
+  printBlock(block);
 }
 
 int main(void) {
@@ -399,16 +444,7 @@ int main(void) {
   uint8_t recovered_block[16];
   
   aes128_encrypt(block, cipher_block, key);
-
-  printf("Bloque encriptado: \n");
-  printBlock(cipher_block);
-  printf("\n");
-  
   aes128_decrypt(cipher_block, recovered_block, key);
-  printf("Bloque desencriptado:\n");
-  printBlock(recovered_block);
-  printf("\n");
-
   return 0;
 }
 
