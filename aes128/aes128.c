@@ -84,6 +84,25 @@ void aes128_subBytes(uint8_t block[16]) {
   block[15] = sbox[block[15]];
 }
 
+void aes128_invSubBytes(uint8_t block[16]) {
+  block[0] = inverse_sbox[block[0]];
+  block[1] = inverse_sbox[block[1]];
+  block[2] = inverse_sbox[block[2]];
+  block[3] = inverse_sbox[block[3]];
+  block[4] = inverse_sbox[block[4]];
+  block[5] = inverse_sbox[block[5]];
+  block[6] = inverse_sbox[block[6]];
+  block[7] = inverse_sbox[block[7]];
+  block[8] = inverse_sbox[block[8]];
+  block[9] = inverse_sbox[block[9]];
+  block[10] = inverse_sbox[block[10]];
+  block[11] = inverse_sbox[block[11]];
+  block[12] = inverse_sbox[block[12]];
+  block[13] = inverse_sbox[block[13]];
+  block[14] = inverse_sbox[block[14]];
+  block[15] = inverse_sbox[block[15]];
+}
+
 void aes128_shiftRows(uint8_t block[16]) {
   uint8_t tmp;
 
@@ -266,7 +285,7 @@ void aes128_decrypt(const uint8_t cipher_block[16], uint8_t block[16], const uin
     if(round != Round10)
       aes128_mixColumns(block);
 
-    aes128_subBytes(block);
+    aes128_invSubBytes(block);
     aes128_shiftRows(block);
   }
 
