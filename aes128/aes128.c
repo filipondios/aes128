@@ -65,19 +65,6 @@ static const uint8_t Rcon[][4] = {
   [Round10] = {0x36, 0x00, 0x00, 0x00}
 };
 
-static uint8_t RoundKeys[10][16] = {
-  [Round01] = {0x00},
-  [Round02] = {0x00},
-  [Round03] = {0x00},
-  [Round04] = {0x00},
-  [Round05] = {0x00},
-  [Round06] = {0x00},
-  [Round07] = {0x00},
-  [Round08] = {0x00},
-  [Round09] = {0x00},
-  [Round10] = {0x00},
-};
-
 void aes128_subBytes(uint8_t block[16]) {
   block[0] = sbox[block[0]];
   block[1] = sbox[block[1]];
@@ -351,6 +338,7 @@ void aes128_encrypt(const uint8_t block[16], uint8_t cipher_block[16], const uin
 }
 
 void aes128_decrypt(const uint8_t cipher_block[16], uint8_t block[16], const uint8_t key[16]) {
+  uint8_t roundKeys[10][16];
   uint8_t roundKey[16];
   uint8_t round;
 
@@ -361,7 +349,7 @@ void aes128_decrypt(const uint8_t cipher_block[16], uint8_t block[16], const uin
   // las necesitamos en orden contrario.
   for (round = Round01; round <= Round10; round++){
     aes128_expandKey(roundKey, round);
-    if(round != Round10) memcpy(RoundKeys[round], roundKey, 16);
+    if(round != Round10) memcpy(roundKeys[round], roundKey, 16);
   }
 
   // XOR con la RoundKey de la ronda 10 
@@ -376,18 +364,12 @@ void aes128_decrypt(const uint8_t cipher_block[16], uint8_t block[16], const uin
 
     if(round == Round10) break;
 
-    aes128_addRoundKey(block, RoundKeys[Round09-round]);
+    aes128_addRoundKey(block, roundKeys[Round09-round]);
     aes128_invMixColumns(block);
   }
   
   // XOR con la clave principal
   aes128_addRoundKey(block, key);
-}
-
-void printBlock(uint8_t* block) {
-  for (uint8_t j=0; j < 16; j++)
-    printf("%02x ", block[j]);
-  printf("\n\n");
 }
 
 int main(void) {
@@ -414,10 +396,6 @@ int main(void) {
   
   aes128_encrypt(block, cipher_block, key);
   aes128_decrypt(cipher_block, recovered_block, key);
-
-  //printf("%d", memcmp(block, recovered_block, 16));
-  printBlock(block);
-  printBlock(recovered_block);
   return 0;
 }
 
