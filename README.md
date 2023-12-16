@@ -6,7 +6,7 @@ In this repository you will find the implementation of the <a href="https://es.w
 
 ## Considerations
 
-This code is not recommended for use in document or text encryption of relevance, since, among many reasons, it does not offer a padding mechanism and the mode of operation is not as secure as <a href="https://en.wikipedia.org/wiki/Galois/Counter_Mode">AES GCM</a> could be. Moreover, as its name indicates, it is the 128 version, which is the weakest of the three possible implementations (128, 192 and 256).
+This code is not recommended for use in document or text encryption of relevance, since, among many reasons, it does not offer a padding mechanism and the mode of operation is not as secure as <a href="https://en.wikipedia.org/wiki/Galois/Counter_Mode">AES GCM</a> could be. Moreover, as its name indicates, it is the 128 bit version, which is the weakest of the three possible implementations (128, 192 and 256).
 
 ## Structure
 
