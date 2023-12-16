@@ -4,11 +4,11 @@
 
 In this repository you will find the implementation of the <a href="https://es.wikipedia.org/wiki/Advanced_Encryption_Standard">AES (Advanced Encryption Standard)</a> block cipher that was originally proposed by <a href="https://www.nist.gov/">NIST</a>. The formal document on which this implementation is based is <a href="https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf">FIPS.197.pdf</a>. Please note that this code is for demonstration purposes only and not for other use.
 
-## Consideraciones
+## Considerations
 
 This code is not recommended for use in document or text encryption of relevance, since, among many reasons, it does not offer a padding mechanism and the mode of operation is not as secure as <a href="https://en.wikipedia.org/wiki/Galois/Counter_Mode">AES GCM</a> could be. Moreover, as its name indicates, it is the 128 version, which is the weakest of the three possible implementations (128, 192 and 256).
 
-## Estructura
+## Structure
 
 The content of the different files of the repository will be described below:
 
