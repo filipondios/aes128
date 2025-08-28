@@ -1,27 +1,43 @@
 # AES128
 
-## About
+Rust implementation of the Advanced Encryption Standard (AES).
 
-In this repository you will find the implementation of the <a href="https://es.wikipedia.org/wiki/Advanced_Encryption_Standard">AES (Advanced Encryption Standard)</a> block cipher that was originally proposed by <a href="https://www.nist.gov/">NIST</a>. The formal document on which this implementation is based is <a href="https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf">FIPS.197.pdf</a>. Please note that this code is for demonstration purposes only and not for other use.
+> [!WARNING]  
+> This implementation is just made for fun so it should not be used in production.
+> Its limited to operating with 128-bit blocks of input and corresponding 
+> encrypted 128-bit blocks of output instead of streams of bytes. This implementation
+> also does not have a cryptographically secure key generation algorithm.
 
-## Considerations
+## Usage
 
-This code is not recommended for use in document or text encryption of relevance, since, among many reasons, it does not offer a padding mechanism and the mode of operation is not as secure as <a href="https://en.wikipedia.org/wiki/Galois/Counter_Mode">AES GCM</a> could be. Moreover, as its name indicates, it is the 128 bit version, which is the weakest of the three possible implementations (128, 192 and 256).
+The usage of this algorithm is dead simple, there are only two possible available 
+functions for the user: `aes::encrypt_block` and `aes::decrypt_block`. You have
+already an example at `src/main.rs` similar to this code below:
 
-## Structure
+```rust
+let block: [u8; 16] = [
+  0x54, 0x68, 0x61, 0x74,
+  0x73, 0x20, 0x6D, 0x79,
+  0x20, 0x4B, 0x75, 0x6E,
+  0x67, 0x20, 0x46, 0x75,
+];
 
-The content of the different files of the repository will be described below:
+let key: [u8; 16] = [
+  0x54, 0x77, 0x6F, 0x20,
+  0x4F, 0x6E, 0x65, 0x20,
+  0x4E, 0x69, 0x6E, 0x65,
+  0x20, 0x54, 0x77, 0x6F,
+];
 
-- <ins>aes128.h</ins>: Declaration of the two functions, both encryption and decryption.
-- <ins>aes128.c</ins>: All the functions of each stage of the rounds.
-- <ins>utils.c</ins>: Functions for the generation of the SBox table and its inverse.
-- <ins>tests</ins>: A folder with a test based on the following example: <a href="https://www.kavaliro.com/wp-content/uploads/2014/03/AES.pdf">AES.pdf</a>
-
-## Test
-
-If you want to test the proposed test, execute the following commands:
-
-```bash
-cd tests/
-make test
+let cipher = aes::encrypt_block(block,  key);
+let plain  = aes::decrypt_block(cipher, key);
 ```
+
+Oviously both functions expect two 128-bit blocks (represented as two 8-bit
+unsigned integer arrays), one for the block to be encrypted or decrypted and the key.
+The output to the previous code must be the following:
+
+## References
+
+- [AES by NIST, NIST FIPS 197-upd1](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf)
+- [AES Example](https://www.kavaliro.com/wp-content/uploads/2014/03/AES.pdf)
